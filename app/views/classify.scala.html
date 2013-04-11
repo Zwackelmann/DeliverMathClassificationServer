@@ -1,0 +1,173 @@
+@(paperForm: Form[Paper])
+
+@import helper._
+
+@main(title = "MSC Klassen finden") {
+	<header class="body">
+        <h1>MSC Klassen finden</h1>
+    </header>
+
+    <section class="body">
+    	<div id="info"></div>
+        <form>
+            <label>Titel des Papers</label>
+            <input placeholder="Titel eingeben" id="title_text">
+            
+            <label>Abstract des Papers</label>
+            <textarea placeholder="Abstract eingeben" id="abstract_text"></textarea>
+            <input type="hidden" id="paper_id" value="" />
+        </form>
+        <div id="classes">
+        	 <span id="submit">Klassen finden</span>
+        </div>
+
+    </section>
+
+    <footer class="body">
+    </footer>
+} {
+	<script type="text/javascript">
+		$(document).ready(function() {
+			$("#submit").click(submitPaper)
+		});
+
+		function mscClassDivString(classString, quality, active) {
+			return "<div class=\"msc_class " + quality + "\">" + 
+				"<span class=\"main_class" + (active ? " active" : "") + "\" onClick=\"setMainClass($(this))\"></span>" + 
+				"<span class=\"class\">" + classString + "</span>" + 
+				"<span class=\"delete_button\" onClick=\"deleteElement($(this))\"></span>" + 
+			"</div> "
+		}
+
+		function submitPaper() {
+			console.log("submit paper")
+			var submitButton = $('#submit')
+			var abstractText = $('#abstract_text').val()
+			var titleText = $('#title_text').val()
+			var addClassButton = $('<div class="add_class" onClick="addClass()">&#202;</div>')
+
+			$('#info').empty()
+
+			jQuery.get(
+				"/result", 
+				{"title_text" : titleText, "abstract_text": abstractText}, 
+				function(data, textStatus, jqXHR) {
+					var classes = $("#classes")
+					classes.empty()
+					var paper_id = $("#paper_id")
+					
+					if(data.success == "true") {
+						var classesWithConfidenceList = eval(data.classes)
+						for(i=0; i<classesWithConfidenceList.length; i++) {
+							var classWithConfidence = classesWithConfidenceList[i]
+							var quality
+							if(classWithConfidence[1] >= 0.9) {
+								quality = "good"
+							} else if(classWithConfidence[1] >= 0.8) {
+								quality = "quite_good"
+							} else if(classWithConfidence[1] >= 0.7) {
+								quality = "okay"
+							} else if(classWithConfidence[1] >= 0.6) {
+								quality = "quite_bad"
+							} else {
+								quality = "bad"
+							}
+
+							classes.append(mscClassDivString(classWithConfidence[0], quality, i==0))
+						}
+						submitButton.text("absenden")
+						submitButton.unbind()
+						submitButton.click(submitClasses)
+						classes.append(addClassButton)
+						classes.append(submitButton)
+						paper_id.val(data.paper_id)
+					} else {
+						errors.append("<p>" + data.msg + "</p> ")
+					}
+				},
+				"json"
+			)
+		}
+
+		function submitClasses() {
+			console.log("submit classes")
+			var submitButton = $('#submit')
+			var abstractTextbox = $('#abstract_text')
+			var titleTextbox = $('#title_text')
+			var paper_id = $('#paper_id')
+
+			var classesStrings = []
+			var classesElements = $("#classes").find("div > span.class")
+			classesElements.each(function(index, classElement) {
+				classesStrings.push(classElement.innerHTML)
+			})
+
+			var inputElements = $("#classes").find("input[type='text']")
+			inputElements.each(function(index, inputElement) {
+				classesStrings.push(inputElement.value)
+			})
+
+			var normalClasses = $("#classes").find("div > span.main_class.active").parent("div").find("span.class")
+			var addedClasses = $("#classes").find("div > span.main_class.active").parent("div").find("input[type='text']")
+
+			var mainClass = ""
+			if(normalClasses.size() == 1 && addedClasses.size() == 0) {
+				mainClass = normalClasses.first().text()
+			} else if(normalClasses.size() == 0 && addedClasses.size() == 1) {
+				mainClass = addedClasses.first().val()
+			} else {
+				console.log("no main class could be determined")
+			}
+
+			jQuery.post(
+				"/trueClasses", 
+				{"true_classes" : classesStrings, "main_class" : mainClass, "paper_id" : paper_id.val()}, 
+				function(data, textStatus, jqXHR) {
+					$('#info').empty()
+					if(data.success == "true") {
+						var classes = $("#classes")
+						classes.empty()
+						classes.append(submitButton)
+						submitButton.text("Klassen finden")
+						submitButton.unbind()
+						submitButton.click(submitPaper)
+
+						$('#abstract_text').val("")
+						$('#title_text').val("")
+					} else {
+						alert("Beim Verarbeiten der Anfrage ist ein unerwarteter Fehler unterlaufen.")
+					}
+				}
+			)
+		}
+
+		function setMainClass(targetSpan) {
+			var spans = $("#classes").find("div > span.main_class")
+			spans.removeClass("active")
+			targetSpan.addClass("active")
+		}
+	
+		function addClass() {
+			var addClassButton = $('.add_class:first')
+			var noSpansThere = $("#classes").find("div > span.main_class").size() == 0
+			addClassButton.before("<div class=\"msc_class\"><span class=\"main_class" + (noSpansThere ? " active" : "") + "\" onClick=\"setMainClass($(this))\"></span> <input type=\"text\" placeholder=\"XX-XX\"></div> ")
+		}
+
+		function deleteElement(targetElement) {
+			var resetActive = targetElement.parent('div').find("span.main_class").hasClass("active")
+			targetElement.parent('div').remove()
+
+			if(resetActive) {
+				var spans = $("#classes").find("div > span.main_class")
+				if(spans.size() >= 1) {
+					var firstSpan = spans.first()
+					spans.removeClass("active")
+					firstSpan.addClass("active")
+				}
+			}
+		}
+	</script>
+}
+
+
+
