@@ -96,11 +96,11 @@ object Application extends Controller {
         )(TrueClasses.apply)(TrueClasses.unapply)
     )
 
-    // val queryEvaluator = AllClassesForDocument()
+    val queryEvaluator = AllClassesForDocument()
 
     private def findCategories(abstractText: String, titleText: String): List[Pair[String, Double]] = {
-        // queryEvaluator.findCategories(abstractText, titleText)
-        List(("01A05", 0.90), ("05C35", 0.85), ("05A__", 0.95), ("90K55", 0.55), ("80B__", 0.6), ("60C30", 0.75))
+        queryEvaluator.findCategories(abstractText, titleText)
+        // List(("01A05", 0.90), ("05C35", 0.85), ("05A__", 0.95), ("90K55", 0.55), ("80B__", 0.6), ("60C30", 0.75))
     }
 
     def index = Action { implicit request => 
