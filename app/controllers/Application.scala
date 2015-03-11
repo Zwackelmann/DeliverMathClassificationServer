@@ -18,6 +18,7 @@ import java.util.Date
 import java.security.MessageDigest
 import java.sql.DriverManager
 import java.sql.Statement
+import scala.collection.mutable
 
 object CookieGenerator {
     def randomStream: Stream[Int] = (math.random * 10).toInt #:: randomStream
@@ -96,11 +97,31 @@ object Application extends Controller {
         )(TrueClasses.apply)(TrueClasses.unapply)
     )
 
-    // val queryEvaluator = AllClassesForDocument()
+    val queryEvaluator = AllClassesForDocument()
 
     private def findCategories(abstractText: String, titleText: String): List[Pair[String, Double]] = {
-        // queryEvaluator.findCategories(abstractText, titleText)
-        List(("01A05", 0.90), ("05C35", 0.85), ("05A__", 0.95), ("90K55", 0.55), ("80B__", 0.6), ("60C30", 0.75))
+        val queryList = queryEvaluator.findCategories(abstractText, titleText)
+        if(queryList.forAll(_._1.length() == 5)) {
+            val topLevelClassif = queryList.filter(cl => cl._1.substring(2, 5) == "___").sortWith((a, b) => a._2 > b._2)
+            val secondLevelClassif = queryList.filter(cl => cl._1.charAt(2) != "_" && cl._1.substring(3, 5) == "__").sortWith((a, b) => a._2 > b._2)
+            val thirdLevelClassif = queryList.filter(cl => cl._1.charAt(4) != "_").sortWith((a, b) => a._2 > b._2)
+
+            val structuredQueryList = new mutable.ListBuffer[(String, Double)]
+            for(topLevelClassification <- topLevelClassif) {
+                structuredQueryList += topLevelClassification
+                val fittingSecondLevelClassif = secondLevelClassif.filter(cl => cl._1.substring(0,2) == topLevelClassification._1.substring(0,2))
+                for(secondLevelClassification <- fittingSecondLevelClassif) {
+                    structuredQueryList += secondLevelClassification
+                    val fittingThirdLevelClassif = thirdLevelClassif.filter(cl => cl._1.substring(0,3) == secondLevelClassification._1.substring(0,3))
+                    structuredQueryList ++= fittingThirdLevelClassif
+                }   
+            }
+            structuredQueryList.toList
+        } else {
+            queryList
+        }
+
+        // List(("01A05", 0.90), ("05C35", 0.85), ("05A__", 0.95), ("90K55", 0.55), ("80B__", 0.6), ("60C30", 0.75))
     }
 
     def index = Action { implicit request => 
