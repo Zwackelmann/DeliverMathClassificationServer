@@ -16,8 +16,8 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Promise
 import java.util.Date
 import java.security.MessageDigest
-import java.sql.DriverManager
-import java.sql.Statement
+// import java.sql.DriverManager
+// import java.sql.Statement
 import scala.collection.mutable
 
 object CookieGenerator {
@@ -52,9 +52,9 @@ object CookieGenerator {
 }
 
 object Application extends Controller {
-    val conn = DriverManager.getConnection("jdbc:derby:delivermathdata;create=true")
+    // val conn = DriverManager.getConnection("jdbc:derby:delivermathdata;create=true")
 
-    try {
+    /* try {
         val stmt = conn.createStatement()
         stmt.execute("""CREATE TABLE request(
             user_id CHAR(64),
@@ -76,12 +76,12 @@ object Application extends Controller {
         )""")
     } catch {
         case ex: Throwable => // ex.printStackTrace
-    }
+    } */
 
-    val insertRequestStmt = conn.prepareStatement("INSERT INTO request (user_id, paper_id, paper_abstract, paper_title) VALUES (?, ?, ?, ?)")
+    /* val insertRequestStmt = conn.prepareStatement("INSERT INTO request (user_id, paper_id, paper_abstract, paper_title) VALUES (?, ?, ?, ?)")
     val insertSuggestionStmt = conn.prepareStatement("INSERT INTO suggested_classes (paper_id, msc_code, certainty) VALUES (?, ?, ?)")
     val insertTrueStmt = conn.prepareStatement("INSERT INTO true_classes (paper_id, true_class, main_class) VALUES (?, ?, ?)")
-
+    */
     val paperForm = Form(
         mapping(
             "title_text" -> text,
@@ -101,10 +101,10 @@ object Application extends Controller {
 
     private def findCategories(abstractText: String, titleText: String): List[Pair[String, Double]] = {
         val queryList = queryEvaluator.findCategories(abstractText, titleText)
-        if(queryList.forAll(_._1.length() == 5)) {
+        if(queryList.forall(_._1.length() == 5)) {
             val topLevelClassif = queryList.filter(cl => cl._1.substring(2, 5) == "___").sortWith((a, b) => a._2 > b._2)
-            val secondLevelClassif = queryList.filter(cl => cl._1.charAt(2) != "_" && cl._1.substring(3, 5) == "__").sortWith((a, b) => a._2 > b._2)
-            val thirdLevelClassif = queryList.filter(cl => cl._1.charAt(4) != "_").sortWith((a, b) => a._2 > b._2)
+            val secondLevelClassif = queryList.filter(cl => cl._1.charAt(2) != '_' && cl._1.substring(3, 5) == "__").sortWith((a, b) => a._2 > b._2)
+            val thirdLevelClassif = queryList.filter(cl => cl._1.charAt(4) != '_').sortWith((a, b) => a._2 > b._2)
 
             val structuredQueryList = new mutable.ListBuffer[(String, Double)]
             for(topLevelClassification <- topLevelClassif) {
@@ -136,12 +136,12 @@ object Application extends Controller {
         trueClassesForm.bindFromRequest.fold(
             formWithErrors => Ok(Json.toJson(Map("success" -> "false", "msg" -> "invalid form parameters"))),
             trueClasses => {
-                for(c <- trueClasses.trueClasses) {
+                /* for(c <- trueClasses.trueClasses) {
                     insertTrueStmt.setString(1, trueClasses.paperId)
                     insertTrueStmt.setString(2, c)
                     insertTrueStmt.setString(3, (if(c == trueClasses.mainClass) "1" else "0"))
                     insertTrueStmt.executeUpdate
-                }
+                }*/
                 Ok(Json.toJson(Map("success" -> Json.toJson("true"))))
             }
         )
@@ -159,7 +159,7 @@ object Application extends Controller {
                         case cl: List[Pair[String, Double]] => {
                             val generatedPaperId = CookieGenerator()
 
-                            val value = request.cookies.get("delivermath").get.value
+                            /* val value = request.cookies.get("delivermath").get.value
                             insertRequestStmt.setString(1, value)
                             insertRequestStmt.setString(2, generatedPaperId)
                             insertRequestStmt.setString(3, paper.abstractText)
@@ -172,7 +172,7 @@ object Application extends Controller {
                                 insertSuggestionStmt.setString(2, c._1)
                                 insertSuggestionStmt.setDouble(3, c._2)
                                 insertSuggestionStmt.executeUpdate()
-                            }
+                            } */
 
                             val labelsSorted = cl.sortWith((a, b) => a._2 > b._2)
                             Ok(Json.toJson(Map(
