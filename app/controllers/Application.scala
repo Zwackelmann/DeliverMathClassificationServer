@@ -120,7 +120,6 @@ object Application extends Controller {
         } else {
             queryList
         }
-
         // List(("01A05", 0.90), ("05C35", 0.85), ("05A__", 0.95), ("90K55", 0.55), ("80B__", 0.6), ("60C30", 0.75))
     }
 
